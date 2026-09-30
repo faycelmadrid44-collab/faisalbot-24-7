@@ -150,6 +150,11 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("reset", reset_command))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    
+    
+    
+    
+ __import__('threading').Thread(target=__import__('http.server').HTTPServer(("0.0.0.0", int(__import__('os').environ.get("PORT", 10000))), type('H', (__import__('http.server').BaseHTTPRequestHandler,), {'do_GET': lambda s: (s.send_response(200), s.end_headers(), s.wfile.write(b"OK"))})).serve_forever, daemon=True).start()
     app.run_polling()
 
 if __name__ == "__main__":
