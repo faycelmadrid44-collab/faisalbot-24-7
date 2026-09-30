@@ -1,55 +1,57 @@
-import os, logging
+import os
+import logging
 from dotenv import load_dotenv
-load_dotenv()
-logging.basicConfig(level=logging.INFO)
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Setup
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
-SYS = "You are Faisal AI dz, designed and built by Faisal 41 Ain Defla Algeria. You are ultra-smart. You speak all languages."
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+
+if not TOKEN:
+    raise ValueError("TELEGRAM_TOKEN not found")
+if not GEMINI_KEY:
+    raise ValueError("GEMINI_API_KEY not found")
+
+genai.configure(api_key=GEMINI_KEY)
+
+SYS_PROMPT = "You are Faisal AI dz, from Algeria. You are friendly, smart, helpful. You speak Algerian Darija, Arabic, French, and English. Always answer in the same language the user uses."
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYS_PROMPT
+)
 
 chats = {}
+
 def get_chat(cid):
     if cid not in chats:
-        model = genai.GenerativeModel(model_name="gemini-3.8-flash", system_instruction=SYS)
         chats[cid] = model.start_chat(history=[])
     return chats[cid]
 
-async def start(update, context):
-    await update.message.reply_text("🌟 Marhaban! I am *Faisal AI dz* by Faisal 41 Ain Defla. Send me any question!", parse_mode="Markdown")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("🌟 Marhaba! Ana Faisal bot 24/7 - sawlni ay haja!")
 
-async def handle(update, context):
+async def reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        c = get_chat(update.effective_chat.id)
-        r = c.send_message(update.message.text)
-        await update.message.reply_text(r.text)
+        text = update.message.text
+        chat = get_chat(update.effective_chat.id)
+        res = await chat.send_message_async(text)
+        await update.message.reply_text(res.text)
     except Exception as e:
-        await update.message.reply_text(f"Error: {e}")
-
-def fake_server():
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    import threading
-    class H(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200); self.end_headers(); self.wfile.write(b"OK")
-        def log_message(self,*a): return
-    p=int(os.environ.get("PORT",10000))
-    HTTPServer(("0.0.0.0",p),H).serve_forever
+        logging.error(f"Error: {e}")
+        await update.message.reply_text("Dqiqa khoya, kayen daght chwiya, 3awed ab3atli.")
 
 def main():
-    import threading
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    class H(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200); self.end_headers(); self.wfile.write(b"Live")
-        def log_message(self,*a): return
-    threading.Thread(target=lambda: HTTPServer(("0.0.0.0",int(os.environ.get("PORT",10000))),H).serve_forever(),daemon=True).start()
-    app=ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
-    app.add_handler(CommandHandler("start",start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,handle))
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply))
+    print("Bot is running...")
     app.run_polling()
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
